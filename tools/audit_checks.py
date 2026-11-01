@@ -505,6 +505,10 @@ def actual_http_endpoints():
         for module in (app_config, web_console):
             for name, value in paths.items():
                 stack.enter_context(patch.object(module, name, value))
+        web_assets = base / "web"
+        shutil.copytree(ROOT / "web", web_assets)
+        (web_assets / "private.txt").write_text("must not be served", encoding="utf-8")
+        stack.enter_context(patch.object(web_console, "WEB_ROOT", web_assets))
         stack.enter_context(patch.object(web_console, "env_var", return_value=""))
         stack.enter_context(patch.object(web_console, "HOMEWORK_CACHE", {"at": 1, "items": [{"key": "keep"}]}))
         app_config.ensure_config()
@@ -534,6 +538,13 @@ def actual_http_endpoints():
             assert saved["model"] == "test-model" and saved["api_key"] == ""
             assert request("POST", "/api/settings", {"base_url": "invalid"})[0] == 400
             assert request("GET", "/../config.json")[0] == 403
+            assert request("GET", "/%2e%2e/config.json")[0] == 403
+            assert request("GET", "/private.txt")[0] == 404
+            assert request("GET", "/app.js%0d%0aInjected:value")[0] == 404
+            for name in ("index.html", "app.js", "styles.css", "favicon.svg"):
+                status, payload = request("GET", "/" + name)
+                assert status == 200 and payload == (web_assets / name).read_bytes()
+            assert request("HEAD", "/styles.css") == (200, b"")
             manager._process = types.SimpleNamespace(poll=lambda: None)
             assert request("POST", "/api/action/sync", {"force_login": True})[0] == 409
             assert web_console.HOMEWORK_CACHE["items"] == [{"key": "keep"}]
@@ -549,7 +560,8 @@ def actual_http_endpoints():
             server.server_close()
             thread.join(timeout=3)
     return {"settings_masked": True, "clear_preserves_model": True, "invalid_url_rejected": True,
-            "path_traversal_blocked": True, "rejected_sync_preserves_cache": True, "manual_status_survives": True}
+            "path_traversal_blocked": True, "fixed_static_allowlist": True,
+            "rejected_sync_preserves_cache": True, "manual_status_survives": True}
 
 
 def tls_runtime_self_check():
@@ -682,5 +694,6 @@ if __name__ == "__main__":
             RESULTS.append({"name": "frontend_probes", "passed": False, "error": run.stderr})
         else:
             RESULTS.extend(json.loads(line) for line in run.stdout.splitlines() if line.strip())
-    print(json.dumps(RESULTS, ensure_ascii=False, indent=2))
+    # JSON remains readable by machines even on Windows terminals using a legacy code page.
+    print(json.dumps(RESULTS, ensure_ascii=True, indent=2))
     sys.exit(0 if all(item["passed"] for item in RESULTS) else 1)

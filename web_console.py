@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import mimetypes
 import os
 import re
 import shutil
@@ -721,21 +720,22 @@ class ConsoleRequestHandler(BaseHTTPRequestHandler):
         self.send_file(target, "image/png", cache_control="no-store")
 
     def serve_static(self, url_path: str, include_body: bool = True) -> None:
-        relative_path = unquote(url_path).lstrip("/") or "index.html"
-        if relative_path.endswith("/"):
-            relative_path += "index.html"
-        try:
-            target = (WEB_ROOT / relative_path).resolve()
-            target.relative_to(WEB_ROOT.resolve())
-        except (OSError, ValueError):
-            self.send_error(HTTPStatus.FORBIDDEN)
+        # All frontend assets are fixed. Never turn URL input into a filesystem path or MIME header.
+        assets = {
+            "/": ("index.html", "text/html; charset=utf-8"),
+            "/index.html": ("index.html", "text/html; charset=utf-8"),
+            "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+            "/styles.css": ("styles.css", "text/css; charset=utf-8"),
+            "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+        }
+        requested = unquote(url_path)
+        asset = assets.get(requested)
+        if asset is None:
+            unsafe = ".." in requested.replace("\\", "/").split("/") or "\\" in requested
+            self.send_error(HTTPStatus.FORBIDDEN if unsafe else HTTPStatus.NOT_FOUND)
             return
-        content_type, _ = mimetypes.guess_type(target.name)
-        self.send_file(
-            target,
-            f"{content_type or 'application/octet-stream'}; charset=utf-8",
-            include_body,
-        )
+        filename, content_type = asset
+        self.send_file(WEB_ROOT / filename, content_type, include_body)
 
     def send_file(
         self,
