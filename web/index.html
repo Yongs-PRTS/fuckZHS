@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ZHS 本地学习控制台：查看课程清单并生成学习任务命令。">
+  <title>ZHS 学习控制台</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="page-noise" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="返回页面顶部">
+      <span class="brand-mark">Z</span>
+      <span class="brand-copy">
+        <strong>ZHS</strong>
+        <small>STUDY CONSOLE</small>
+      </span>
+    </a>
+
+    <nav class="main-nav" aria-label="页面导航">
+      <a class="active" href="#overview">工作台</a>
+      <a href="#courses">课程清单</a>
+      <a href="#guide">使用指南</a>
+    </nav>
+
+    <div class="connection-pill" id="connectionStatus" aria-live="polite">
+      <span class="status-dot"></span>
+      <span>正在连接</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="overview">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> LOCAL COURSE WORKSPACE</p>
+        <h1>把课程进度，<br><em>放进同一块屏幕。</em></h1>
+        <p class="hero-lead">
+          双击程序即可打开。扫码登录、同步课程、选择学习任务都在这一页完成，
+          不需要命令，也不需要另外打开终端。
+        </p>
+        <div class="hero-actions">
+          <button class="button button-primary" id="heroSyncButton" type="button">
+            扫码登录并同步
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4"/></svg>
+          </button>
+          <button class="button button-quiet" id="refreshButton" type="button">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 7a6.5 6.5 0 1 0 .2 6M16 3v4h-4"/></svg>
+            刷新数据
+          </button>
+        </div>
+        <div class="hero-meta">
+          <span><b id="versionLabel">--</b> 当前版本</span>
+          <span><b id="pythonLabel">--</b> Python 环境</span>
+          <span><b>仅本机</b> 数据可见</span>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-label="课程数据概览">
+        <div class="visual-orbit orbit-one"></div>
+        <div class="visual-orbit orbit-two"></div>
+        <article class="workspace-preview">
+          <div class="preview-header">
+            <span class="preview-title">
+              <i></i>
+              LIVE WORKSPACE
+            </span>
+            <span class="preview-index">01 / 03</span>
+          </div>
+          <div class="preview-main">
+            <div class="course-counter">
+              <span>COURSES</span>
+              <strong id="heroCourseCount">00</strong>
+              <small>已加入本地清单</small>
+            </div>
+            <div class="counter-ring" aria-hidden="true">
+              <svg viewBox="0 0 120 120">
+                <circle class="ring-track" cx="60" cy="60" r="53"></circle>
+                <circle class="ring-value" id="heroRing" cx="60" cy="60" r="53"></circle>
+              </svg>
+              <span id="heroRingText">00%</span>
+            </div>
+          </div>
+          <div class="preview-courses" id="heroCourses">
+            <div class="preview-course">
+              <span class="course-number">--</span>
+              <span class="course-line"></span>
+              <span class="course-tag">等待同步</span>
+            </div>
+          </div>
+          <div class="preview-footer">
+            <span>LAST SYNC</span>
+            <strong id="lastSyncLabel">尚未同步</strong>
+          </div>
+        </article>
+        <div class="floating-note">
+          <span class="note-icon">↗</span>
+          <span><b>本地优先</b><small>不上传课程信息</small></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-grid" aria-label="项目状态">
+      <article class="stat-card">
+        <span class="stat-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14v13H5zM8 9h8M8 12h5M8 15h3"/></svg>
+        </span>
+        <div>
+          <span class="stat-label">课程清单</span>
+          <strong id="statCourses">--</strong>
+          <small id="statCoursesHint">正在读取</small>
+        </div>
+      </article>
+      <article class="stat-card">
+        <span class="stat-icon accent">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>
+        </span>
+        <div>
+          <span class="stat-label">登录方式</span>
+          <strong id="statLogin">--</strong>
+          <small id="statCookies">检查本地凭据</small>
+        </div>
+      </article>
+      <article class="stat-card">
+        <span class="stat-icon cool">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17h16M7 14V9m5 5V5m5 9v-3"/></svg>
+        </span>
+        <div>
+          <span class="stat-label">终端视图</span>
+          <strong id="statView">--</strong>
+          <small id="statBars">读取显示偏好</small>
+        </div>
+      </article>
+      <article class="stat-card">
+        <span class="stat-icon warm">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+        </span>
+        <div>
+          <span class="stat-label">最近活动</span>
+          <strong id="statActivity">--</strong>
+          <small id="statActivityHint">尚未发现运行记录</small>
+        </div>
+      </article>
+    </section>
+
+    <section class="workspace-grid">
+      <article class="panel courses-panel" id="courses">
+        <header class="panel-header">
+          <div>
+            <p class="section-kicker">COURSE LIBRARY</p>
+            <h2>本地课程清单</h2>
+            <p>来自 <code>execution.json</code>，勾选课程后会加入右侧任务。</p>
+          </div>
+          <button class="icon-button" id="compactRefresh" type="button" aria-label="刷新课程清单" title="刷新课程清单">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 7a6.5 6.5 0 1 0 .2 6M16 3v4h-4"/></svg>
+          </button>
+        </header>
+
+        <div class="course-toolbar">
+          <label class="search-field">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5"/><path d="m12.2 12.2 4 4"/></svg>
+            <span class="sr-only">搜索课程</span>
+            <input id="courseSearch" type="search" placeholder="搜索课程名称或 ID" autocomplete="off">
+          </label>
+          <button class="text-button" id="selectAllButton" type="button">全选</button>
+        </div>
+
+        <div class="course-list" id="courseList" aria-live="polite">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+
+        <div class="empty-state" id="courseEmpty" hidden>
+          <div class="empty-mark">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 8.5h20v17H6zM10 5h12v6H10zM10 15h12M10 20h7"/></svg>
+          </div>
+          <h3>还没有本地课程清单</h3>
+          <p>点击下面的按钮，用手机扫码登录后会自动同步课程。</p>
+          <button class="button button-primary compact-action" id="emptySyncButton" type="button">扫码登录并同步</button>
+        </div>
+      </article>
+
+      <aside class="panel task-panel" id="task">
+        <header class="panel-header task-heading">
+          <div>
+            <p class="section-kicker">ONE-CLICK TASK</p>
+            <h2>一键学习</h2>
+            <p>登录后既能刷课，也能做作业 / 单元测试。</p>
+          </div>
+          <span class="task-state" id="taskStateBadge">READY</span>
+        </header>
+
+        <div class="sync-block">
+          <div>
+            <span class="mini-label">STEP 01</span>
+            <strong>登录与同步</strong>
+            <small>首次使用或 Cookie 失效时操作</small>
+          </div>
+          <div class="sync-actions">
+            <button class="sync-button" id="syncButton" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h12v12H4zM7 7h6M7 10h6M7 13h3"/></svg>
+              扫码同步
+            </button>
+            <button class="switch-account" id="switchAccountButton" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h9l-2.5-2.5M16 14H7l2.5 2.5"/></svg>
+              切换账号
+            </button>
+          </div>
+        </div>
+
+        <div class="qr-panel" id="qrPanel" hidden>
+          <img id="qrImage" alt="智慧树登录二维码" width="220" height="220">
+          <div>
+            <strong>请用手机扫码</strong>
+            <p>扫码后保持此页面打开，登录成功会自动继续。</p>
+          </div>
+        </div>
+
+        <div class="action-status" id="actionStatus" data-state="idle">
+          <div class="action-status-top">
+            <span class="action-status-dot"></span>
+            <strong id="actionStatusTitle">等待操作</strong>
+            <time id="actionStatusTime"></time>
+          </div>
+          <p id="actionStatusMessage">尚未开始任务，先扫码登录或选择课程。</p>
+          <div class="action-progress-row">
+            <div class="action-progress" aria-hidden="true">
+              <i id="actionProgressBar"></i>
+            </div>
+            <span class="action-progress-text" id="actionProgressText">0%</span>
+          </div>
+          <p class="action-captcha" id="actionCaptchaHint" hidden></p>
+          <button class="process-button" id="processButton" type="button">
+            更多
+            <span>查看完整运行过程</span>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 8 3 3 3-3"/></svg>
+          </button>
+        </div>
+
+        <form id="taskForm">
+          <fieldset class="field-group">
+            <legend>STEP 02 · 任务类型</legend>
+            <div class="segmented-control task-kind">
+              <label>
+                <input type="radio" name="taskKind" value="course" checked>
+                <span>刷课</span>
+              </label>
+              <label>
+                <input type="radio" name="taskKind" value="homework">
+                <span>作业答题</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="ai-panel" id="homeworkPanel" hidden>
+            <div class="hw-head">
+              <div>
+                <strong>作业 / 单元测试</strong>
+                <small>接口只负责取题，作答交给真实浏览器，验证码由你点一下</small>
+              </div>
+              <button class="hw-scan" id="homeworkScanButton" type="button">扫描作业</button>
+            </div>
+
+            <div class="hw-list" id="homeworkList" aria-live="polite">
+              <p class="hint-line">点「扫描作业」读取可做的作业清单</p>
+            </div>
+
+            <div class="form-grid">
+              <label class="field">
+                <span>等待验证码 <small>秒</small></span>
+                <select id="homeworkWait">
+                  <option value="180">3 分钟</option>
+                  <option value="300" selected>5 分钟</option>
+                  <option value="600">10 分钟</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>提交方式</span>
+                <select id="homeworkSubmit">
+                  <option value="0" selected>填完我来提交</option>
+                  <option value="1">自动提交</option>
+                </select>
+              </label>
+            </div>
+
+            <details class="llm-settings" id="llmSettings">
+              <summary>
+                <span>答题模型</span>
+                <small id="llmStatus">未配置</small>
+              </summary>
+              <div class="llm-body">
+                <label class="field">
+                  <span>服务商</span>
+                  <select id="llmProvider">
+                    <option value="deepseek">DeepSeek 官方</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="moonshot">Moonshot / Kimi</option>
+                    <option value="siliconflow">硅基流动</option>
+                    <option value="zhipu">智谱 GLM</option>
+                    <option value="dashscope">通义千问</option>
+                    <option value="ollama">本地 Ollama</option>
+                    <option value="custom">自定义 / 中转站</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>API 地址</span>
+                  <input id="llmBase" type="text" placeholder="https://api.deepseek.com" autocomplete="off" spellcheck="false">
+                </label>
+                <label class="field">
+                  <span>模型名称</span>
+                  <input id="llmModel" type="text" placeholder="deepseek-chat" autocomplete="off" spellcheck="false">
+                </label>
+                <label class="field">
+                  <span>API Key <small>只存本机</small></span>
+                  <input id="llmKey" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false">
+                </label>
+                <div class="llm-actions">
+                  <button class="hw-scan" id="llmSaveButton" type="button">保存</button>
+                  <button class="text-button" id="llmTestButton" type="button">测试连接</button>
+                  <button class="text-button" id="llmClearButton" type="button">清除 Key</button>
+                  <span class="llm-feedback" id="llmFeedback"></span>
+                </div>
+                <p class="hint-line">
+                  Key 只写进本机的 config.json，不会上传也不会进仓库；换服务商随时可改。
+                </p>
+              </div>
+            </details>
+
+            <p class="hint-line" id="homeworkHint">
+              开始后会弹出一个 Edge 窗口停在答题页：验证码由你点选，其余交给程序。
+            </p>
+          </div>
+
+          <div id="courseFields">
+          <fieldset class="field-group">
+            <legend>STEP 03 · 学习范围</legend>
+            <div class="segmented-control">
+              <label>
+                <input type="radio" name="taskMode" value="all" checked>
+                <span>全部课程</span>
+              </label>
+              <label>
+                <input type="radio" name="taskMode" value="selected">
+                <span>指定课程</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="selected-summary" id="selectedSummary">
+            <span>将自动运行本地清单中的全部课程。</span>
+            <strong id="selectedCount">0 已选</strong>
+          </div>
+
+          <div class="form-grid">
+            <label class="field">
+              <span>播放速度 <small>可不填</small></span>
+              <select id="speedInput">
+                <option value="">网站默认</option>
+                <option value="1.25">1.25× 稳妥</option>
+                <option value="1.5">1.5× 推荐</option>
+                <option value="2">2× 较快</option>
+                <option value="4">4× 很快</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>单课时限 <small>分钟</small></span>
+              <input id="limitInput" type="number" min="0" step="1" placeholder="不限">
+            </label>
+          </div>
+
+          <details class="advanced-settings">
+            <summary>高级设置</summary>
+            <div class="advanced-fields">
+              <label class="field">
+                <span>完成阈值 <small>默认 0.91</small></span>
+                <input id="thresholdInput" type="number" min="0.1" max="2" step="0.01" placeholder="0.91">
+              </label>
+              <label class="field">
+                <span>手动课程 ID <small>逗号分隔</small></span>
+                <input id="manualCourses" type="text" placeholder="如 114514, 1919180">
+              </label>
+            </div>
+          </details>
+          </div>
+
+          <button class="start-button" id="startTaskButton" type="submit">
+            <span id="startTaskLabel">开始学习</span>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 6 5-6 5V5Z"/></svg>
+          </button>
+          <button class="stop-button" id="stopTaskButton" type="button" hidden>停止任务</button>
+          <p class="safety-note">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3 3.5 6v4.5c0 3.4 2.7 5.7 6.5 6.5 3.8-.8 6.5-3.1 6.5-6.5V6L10 3Z"/><path d="m7.4 10 1.7 1.7 3.7-4"/></svg>
+            <span id="safetyNoteText">任务在后台运行；关闭页面不会中止任务，可随时回到此页查看。</span>
+          </p>
+        </form>
+      </aside>
+    </section>
+
+    <section class="bottom-grid" id="guide">
+      <article class="panel guide-panel">
+        <header class="panel-header">
+          <div>
+            <p class="section-kicker">QUICK START</p>
+            <h2>三步开始</h2>
+          </div>
+          <a class="inline-link" href="/README.md" target="_blank" rel="noreferrer">
+            完整文档
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 14 14 6M8 6h6v6"/></svg>
+          </a>
+        </header>
+        <ol class="guide-steps">
+          <li>
+            <span class="step-number">01</span>
+            <div><h3>扫码同步</h3><p>点击“扫码同步”，用手机完成登录。</p><code>首次使用需要扫码</code></div>
+          </li>
+          <li>
+            <span class="step-number">02</span>
+            <div><h3>选择课程</h3><p>勾选课程，或直接保留“全部课程”。</p><code>默认运行全部</code></div>
+          </li>
+          <li>
+            <span class="step-number">03</span>
+            <div><h3>一键开始</h3><p>点击“开始学习”，进度会显示在此页面。</p><code>无需命令行</code></div>
+          </li>
+        </ol>
+      </article>
+
+      <article class="panel activity-panel">
+        <header class="panel-header">
+          <div>
+            <p class="section-kicker">RECENT ACTIVITY</p>
+            <h2>最近记录</h2>
+          </div>
+          <span class="live-label"><i></i> LOCAL LOGS</span>
+        </header>
+        <div class="activity-list" id="activityList" aria-live="polite">
+          <div class="activity-skeleton"></div>
+          <div class="activity-skeleton"></div>
+          <div class="activity-skeleton"></div>
+        </div>
+        <p class="activity-empty" id="activityEmpty" hidden>暂无可用记录，运行一次任务后会自动出现。</p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>ZHS STUDY CONSOLE</span>
+    <span>LOCAL ONLY · NO DATA UPLOAD</span>
+    <span><button class="quit-button" id="quitButton" type="button">退出程序</button> · <span id="footerYear">2026</span></span>
+  </footer>
+
+  <div class="process-overlay" id="processOverlay" hidden>
+    <button class="process-backdrop" id="processBackdrop" type="button" aria-label="关闭完整运行过程"></button>
+    <aside class="process-drawer" role="dialog" aria-modal="true" aria-labelledby="processTitle">
+      <header class="process-drawer-header">
+        <div>
+          <p class="section-kicker">LIVE PROCESS</p>
+          <h2 id="processTitle">完整运行过程</h2>
+        </div>
+        <button class="process-close" id="processCloseButton" type="button" aria-label="关闭">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg>
+        </button>
+      </header>
+      <div class="process-summary">
+        <span class="process-live-dot"></span>
+        <strong id="processStateLabel">等待操作</strong>
+        <span id="processStateMessage">暂时没有运行任务</span>
+        <time id="processUpdatedAt"></time>
+      </div>
+      <div class="process-toolbar">
+        <span><i></i> 正在自动刷新</span>
+        <strong id="processLogCount">0 条记录</strong>
+      </div>
+      <div class="process-log-list" id="processLogList" aria-live="polite"></div>
+      <p class="process-empty" id="processEmpty" hidden>还没有运行记录。开始学习后，完整过程会显示在这里。</p>
+      <footer class="process-drawer-footer">
+        包含课程处理、视频进度、验证码提示和错误信息，不展示登录凭据。
+      </footer>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span class="toast-icon">✓</span>
+    <span id="toastMessage">操作成功</span>
+  </div>
+</body>
+</html>

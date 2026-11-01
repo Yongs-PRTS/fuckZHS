@@ -1,0 +1,8 @@
+Pillow>=8.1.1
+pycryptodome
+requests
+tiktoken
+OpenAI
+pywebview>=5.0
+pyinstaller>=6.0
+websocket-client>=1.7
